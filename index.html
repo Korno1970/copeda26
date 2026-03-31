@@ -1091,33 +1091,32 @@ document.getElementById('em-file-input').addEventListener('change', e => {
   const url = URL.createObjectURL(file);
   document.getElementById('em-preview-img').src = url;
   document.getElementById('em-preview').classList.add('show');
-  document.getElementById('em-send-btn').style.display = 'flex';
+  const sendBtn = document.getElementById('em-send-btn');
+  sendBtn.style.display = 'flex';
   document.getElementById('em-feedback').textContent = 'Photo prête — envoyez-la !';
-});
-
-document.addEventListener('click', async (e) => {
-  if(e.target.id !== 'em-send-btn') return;
-  if(!emineoFichierEnAttente || !emineoLettreSelectionnee) return;
-  const btn = document.getElementById('em-send-btn');
-  btn.disabled = true;
-  document.getElementById('em-feedback').textContent = 'Compression en cours…';
-
-  try {
-    const base64 = await compresserImage(emineoFichierEnAttente, 400, 0.6);
-    document.getElementById('em-feedback').textContent = 'Envoi en cours…';
-    await set(ref(db, `emineo/photos/G${myTeam}/${emineoLettreSelectionnee}`), base64);
-    emineoUploaded[emineoLettreSelectionnee] = true;
-    document.getElementById('em-feedback').textContent = `✓ Lettre ${emineoLettreSelectionnee} envoyée !`;
-    document.getElementById('em-send-btn').style.display = 'none';
-    document.getElementById('em-preview').classList.remove('show');
-    emineoLettreSelectionnee = null;
-    emineoFichierEnAttente = null;
-    document.getElementById('em-file-input').value = '';
-    buildEmineoUI();
-  } catch(err) {
-    document.getElementById('em-feedback').textContent = 'Erreur d\'envoi. Réessayez.';
-    btn.disabled = false;
-  }
+  // Attacher le listener directement sur le bouton maintenant qu'il est visible
+  sendBtn.onclick = async () => {
+    if(!emineoFichierEnAttente || !emineoLettreSelectionnee) return;
+    sendBtn.disabled = true;
+    document.getElementById('em-feedback').textContent = 'Compression en cours…';
+    try {
+      const base64 = await compresserImage(emineoFichierEnAttente, 400, 0.6);
+      document.getElementById('em-feedback').textContent = 'Envoi en cours…';
+      await set(ref(db, `emineo/photos/G${myTeam}/${emineoLettreSelectionnee}`), base64);
+      emineoUploaded[emineoLettreSelectionnee] = true;
+      document.getElementById('em-feedback').textContent = `✓ Lettre ${emineoLettreSelectionnee} envoyée !`;
+      sendBtn.style.display = 'none';
+      sendBtn.onclick = null;
+      document.getElementById('em-preview').classList.remove('show');
+      emineoLettreSelectionnee = null;
+      emineoFichierEnAttente = null;
+      document.getElementById('em-file-input').value = '';
+      buildEmineoUI();
+    } catch(err) {
+      document.getElementById('em-feedback').textContent = 'Erreur d\'envoi. Réessayez.';
+      sendBtn.disabled = false;
+    }
+  };
 });
 
 function compresserImage(file, maxPx, qualite) {
