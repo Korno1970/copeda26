@@ -1095,21 +1095,17 @@ document.getElementById('em-file-input').addEventListener('change', e => {
   document.getElementById('em-feedback').textContent = 'Photo prête — envoyez-la !';
 });
 
-document.getElementById('em-send-btn').addEventListener('click', async () => {
+document.addEventListener('click', async (e) => {
+  if(e.target.id !== 'em-send-btn') return;
   if(!emineoFichierEnAttente || !emineoLettreSelectionnee) return;
   const btn = document.getElementById('em-send-btn');
   btn.disabled = true;
   document.getElementById('em-feedback').textContent = 'Compression en cours…';
 
   try {
-    // Compression via canvas — max 400px, qualité 60%
     const base64 = await compresserImage(emineoFichierEnAttente, 400, 0.6);
-
     document.getElementById('em-feedback').textContent = 'Envoi en cours…';
-
-    // Écrire directement en base64 dans Realtime DB
     await set(ref(db, `emineo/photos/G${myTeam}/${emineoLettreSelectionnee}`), base64);
-
     emineoUploaded[emineoLettreSelectionnee] = true;
     document.getElementById('em-feedback').textContent = `✓ Lettre ${emineoLettreSelectionnee} envoyée !`;
     document.getElementById('em-send-btn').style.display = 'none';
