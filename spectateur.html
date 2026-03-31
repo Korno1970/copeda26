@@ -382,7 +382,7 @@ function showWaiting(msg) {
       <div class="waiting-logo">SÉMINAIRE</div>
       <div class="waiting-sub">${msg || 'En attente de la prochaine épreuve…'}</div>
     </div>`;
-  renderPts();
+  pollScores();
 }
 
 function showBT(data) {
@@ -393,7 +393,7 @@ function showBT(data) {
       <div class="bt-title bt-hidden" id="bt-titre">???</div>
       <div class="bt-artist" id="bt-artiste">Écoutez et buzzez !</div>
     </div>`;
-  renderPts();
+  pollScores();
 }
 
 function showImage(data) {
@@ -405,7 +405,7 @@ function showImage(data) {
         onerror="this.style.display='none';document.getElementById('image-zone').innerHTML='<div style=color:var(--gris);font-size:1rem;>Image non trouvée</div>'">
     </div>`;
   if(revealTimeout) { clearTimeout(revealTimeout); revealTimeout = null; }
-  renderPts();
+  pollScores();
 }
 
 // ── EMINEO — photos uploadées en temps réel ──
@@ -427,7 +427,7 @@ function showEmineo() {
         ${lettres.map(l => `<div class="emineo-cell empty" id="em-cell-${g}-${l}">·</div>`).join('')}
       `).join('')}
     </div>`;
-  renderPts();
+  pollScores();
   get(ref(db,'emineo/photos')).then(snap => {
     if(snap.exists()) renderEmineoPhotos(snap.val());
   });
