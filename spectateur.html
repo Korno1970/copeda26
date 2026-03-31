@@ -247,11 +247,11 @@ let timerInt = null;
 let timerSec = 0;
 let revealTimeout = null;
 
-// ── SCORES — points cumulatifs, stockés en mémoire ──
+// ── SCORES — polling REST toutes les 2s (contourne les problèmes WebSocket) ──
 const ptsCourants = { G1:0, G2:0, G3:0 };
 
 function renderPts() {
-  const max = Math.max(...Object.values(ptsCourants));
+  const max = Math.max(0, ...Object.values(ptsCourants));
   ['G1','G2','G3'].forEach(g => {
     const el = document.getElementById('pts-' + g);
     const row = document.getElementById('score-' + g);
@@ -260,12 +260,23 @@ function renderPts() {
   });
 }
 
-['G1','G2','G3'].forEach(t => {
-  onValue(ref(db, 'game/ep_scores/' + t), snap => {
-    ptsCourants[t] = snap.val() || 0;
-    renderPts();
-  });
-});
+function pollScores() {
+  fetch('https://aperitif-copeda-default-rtdb.europe-west1.firebasedatabase.app/game/ep_scores.json')
+    .then(r => r.json())
+    .then(d => {
+      if(!d) return;
+      let changed = false;
+      ['G1','G2','G3'].forEach(g => {
+        const val = d[g] || 0;
+        if(ptsCourants[g] !== val) { ptsCourants[g] = val; changed = true; }
+      });
+      if(changed) renderPts();
+    })
+    .catch(() => {});
+}
+
+setInterval(pollScores, 2000);
+pollScores(); // premier appel immédiat
 
 function renderScores() {
   const vals = Object.values(scores).map(s => s.length);
