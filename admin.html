@@ -1049,6 +1049,8 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   ]).then(() => {
     scores = { G1:[], G2:[], G3:[] };
     epScores = { G1:0, G2:0, G3:0 };
+    emPhotos = { G1:{}, G2:{}, G3:{} };
+    ["G1","G2","G3"].forEach(g => { ["E","M","I","N","O"].forEach(l => { const c = document.getElementById("em-"+g+"-"+l); if(c){c.innerHTML="·";c.className="eg-cell empty";} }); });
     buildScores();
     // Remettre l'état initial APRÈS l'effacement
     setTimeout(() => {
