@@ -433,17 +433,22 @@ function buildEpList() {
 }
 
 function selectEp(i) {
-  // Si on quitte une épreuve avec des points → attribuer la lettre automatiquement
   if(epIdx >= 0 && i !== epIdx && Object.values(epScores).some(p => p > 0)) {
     attribuerLettreEpreuve();
   }
   epIdx = i; trackIdx = 0; playedTracks = new Set();
-  // Les points NE se remettent PAS à zéro — ils sont cumulatifs sur tout le jeu
   document.querySelectorAll('.ep-item').forEach((el,j) => el.classList.toggle('active', j===i));
   const ep = EPREUVES[i];
   document.getElementById('panel-tag').textContent = ep.label;
   document.getElementById('panel-name').textContent = ep.titre;
   document.getElementById('ep-counter').textContent = (i+1) + '/6';
+  // Pousser immédiatement dans Firebase pour que index.html bascule
+  set(ref(db,'game/epreuve'), { 
+    id:ep.id, statut:'attente', label:ep.label, titre:ep.titre,
+    lettre:MOT[ep.lettre], lettre_idx:ep.lettre,
+    titre_attente: ep.titre + ' — préparez-vous !'
+  });
+  set(ref(db,'game/buzz'), { team:null, ts:null });
   renderPanel(ep);
 }
 
@@ -817,7 +822,13 @@ function verdictOk() {
   set(ref(db,'game/resultat'), { team, correct:true, lettre: MOT[ep.lettre], lettre_idx: ep.lettre, ts:Date.now() });
   set(ref(db,'game/buzz'), { team:null, ts:null });
   const vrow = document.getElementById('verdict-row');
-  if(vrow) vrow.style.display = 'none';
+  if(vrow) { vrow.style.display = 'none'; }
+  const zbadge = document.getElementById('buzz-badge');
+  const zteam = document.getElementById('buzz-team');
+  const zrep = document.getElementById('buzz-rep');
+  if(zbadge) { zbadge.textContent = '—'; zbadge.className = 'buzz-badge'; }
+  if(zteam) zteam.textContent = 'En attente…';
+  if(zrep) zrep.textContent = '—';
   toast('✓ +1pt → G' + team + ' (' + epScores[teamKey] + ' pts)');
   buzzTeam = null; lastRecoTeam = null;
 
