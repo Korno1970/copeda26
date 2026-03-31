@@ -518,15 +518,17 @@ function renderPanel(ep) {
   if(ep.type === 'blindtest') {
     body.innerHTML = `
       ${currentItemHTML(ep)}
+      <button class="btn-main go" id="btn-activate">▶ Lancer ce titre</button>
       <button class="btn-main next" id="btn-next">Titre suivant ⏭</button>
-      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gris);margin-top:.2rem;">Liste complète</div>
+      <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gris);margin-top:.2rem;">Liste complète — clic pour sélectionner</div>
       <div class="track-list" id="track-list">${buildTrackListHTML(ep)}</div>`;
-    attachTrackHandlers(ep);
+    document.getElementById('btn-activate').addEventListener('click', () => activerTitre(ep));
     document.getElementById('btn-next').addEventListener('click', () => {
       playedTracks.add(trackIdx);
       trackIdx = Math.min(trackIdx+1, ep.tracks.length-1);
       updateCurrentItem(ep); activerTitre(ep);
     });
+    attachTrackHandlers(ep);
     buildRightPanel(ep);
     return;
   }
@@ -586,6 +588,7 @@ function attachTrackHandlers(ep) {
     el.addEventListener('click', () => {
       trackIdx = parseInt(el.dataset.idx);
       updateCurrentItem(ep);
+      activerTitre(ep);
     });
   });
 }
