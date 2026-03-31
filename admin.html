@@ -208,7 +208,6 @@ html, body { height:100%; background:var(--noir); color:var(--blanc); font-famil
     <div class="topbar-right">
       <button class="btn-xs" id="btn-timer-start">▶ Timer</button>
       <button class="btn-xs" id="btn-timer-stop">■ Stop</button>
-      <button class="btn-xs" id="btn-qr">QR</button>
       <button class="btn-xs danger" id="btn-reset">Reset</button>
     </div>
   </header>
@@ -246,7 +245,6 @@ html, body { height:100%; background:var(--noir); color:var(--blanc); font-famil
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, set, push, get } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
@@ -428,8 +426,7 @@ function buildEpList() {
       <div class="ep-info">
         <div class="ep-name">${ep.titre}</div>
         <div class="ep-desc">${ep.desc}</div>
-      </div>
-      <span class="ep-lettre">${MOT[ep.lettre]}</span>`;
+      </div>`;
     d.addEventListener('click', () => selectEp(i));
     list.appendChild(d);
   });
@@ -444,7 +441,7 @@ function selectEp(i) {
   // Les points NE se remettent PAS à zéro — ils sont cumulatifs sur tout le jeu
   document.querySelectorAll('.ep-item').forEach((el,j) => el.classList.toggle('active', j===i));
   const ep = EPREUVES[i];
-  document.getElementById('panel-tag').textContent = ep.label + ' · lettre ' + MOT[ep.lettre];
+  document.getElementById('panel-tag').textContent = ep.label;
   document.getElementById('panel-name').textContent = ep.titre;
   document.getElementById('ep-counter').textContent = (i+1) + '/6';
   renderPanel(ep);
@@ -453,47 +450,85 @@ function selectEp(i) {
 function renderPanel(ep) {
   const body = document.getElementById('panel-body');
 
-  if(ep.type === 'physique' || ep.type === 'bonus') {
+  if(ep.type === 'physique') {
     body.innerHTML = `
       <div class="physique-zone">
         <div class="physique-icon">${ep.icon||'🏃'}</div>
         <div class="physique-desc">${ep.desc}</div>
       </div>
       <button class="btn-main go" id="btn-launch">▶ Lancer cette épreuve</button>
-      ${ep.type === 'bonus' ? '<button class="btn-main next" id="btn-lettre-all">🎁 Attribuer la lettre à toutes les équipes</button>' : ''}
-      ${buzzZoneHTML()}`;
-    attachBuzzHandlers();
+      <div style="margin-top:1rem;">
+        <div style="font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gris);margin-bottom:.6rem;">Attribuer la lettre à :</div>
+        <div style="display:flex;gap:.5rem;margin-bottom:.5rem;">
+          <button class="btn-main go" style="flex:1;padding:.6rem;" id="btn-phys-g1">G1</button>
+          <button class="btn-main go" style="flex:1;padding:.6rem;" id="btn-phys-g2">G2</button>
+          <button class="btn-main go" style="flex:1;padding:.6rem;" id="btn-phys-g3">G3</button>
+        </div>
+        <button class="btn-main next" id="btn-phys-all">🎁 Attribuer à tous les groupes</button>
+      </div>`;
     document.getElementById('btn-launch').addEventListener('click', () => {
       set(ref(db,'game/epreuve'), { id:ep.id, statut:'attente', label:ep.label, titre:ep.titre,
         lettre:MOT[ep.lettre], lettre_idx:ep.lettre, titre_attente: ep.titre + ' — en cours !' });
       toast(ep.label + ' lancée');
     });
-    const btnAll = document.getElementById('btn-lettre-all');
-    if(btnAll) btnAll.addEventListener('click', () => { attributeAll(ep.lettre); toast('Lettre ' + MOT[ep.lettre] + ' → toutes les équipes'); });
+    ['g1','g2','g3'].forEach((g,i) => {
+      document.getElementById('btn-phys-'+g).addEventListener('click', () => {
+        const team = 'G'+(i+1);
+        const idx = ep.lettre;
+        const cur = scores[team] || [];
+        if(!cur.includes(idx)) {
+          const upd = [...cur, idx];
+          set(ref(db,'game/scores/'+team+'/lettres'), upd);
+          scores[team] = upd; buildScores();
+        }
+        toast('🏆 Lettre → ' + team);
+      });
+    });
+    document.getElementById('btn-phys-all').addEventListener('click', () => {
+      attributeAll(ep.lettre);
+      toast('Lettre → tous les groupes');
+    });
+    return;
+  }
+
+  if(ep.type === 'bonus') {
+    body.innerHTML = `
+      <div class="physique-zone">
+        <div class="physique-icon">${ep.icon||'🎨'}</div>
+        <div class="physique-desc">${ep.desc}</div>
+      </div>
+      <button class="btn-main go" id="btn-launch">▶ Lancer cette épreuve</button>
+      <button class="btn-main next" id="btn-lettre-all">🎁 Attribuer la lettre à toutes les équipes</button>`;
+    document.getElementById('btn-launch').addEventListener('click', () => {
+      set(ref(db,'game/epreuve'), { id:ep.id, statut:'attente', label:ep.label, titre:ep.titre,
+        lettre:MOT[ep.lettre], lettre_idx:ep.lettre, titre_attente: ep.titre + ' — en cours !' });
+      toast(ep.label + ' lancée');
+    });
+    document.getElementById('btn-lettre-all').addEventListener('click', () => {
+      attributeAll(ep.lettre); toast('Lettre → toutes les équipes');
+    });
     return;
   }
 
   if(ep.type === 'blindtest') {
     body.innerHTML = `
       ${currentItemHTML(ep)}
-      <button class="btn-main go" id="btn-activate">▶ Activer ce titre</button>
       <button class="btn-main next" id="btn-next">Titre suivant ⏭</button>
-      ${buzzZoneHTML()}
       <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gris);margin-top:.2rem;">Liste complète</div>
       <div class="track-list" id="track-list">${buildTrackListHTML(ep)}</div>`;
-    attachBuzzHandlers();
     attachTrackHandlers(ep);
-    document.getElementById('btn-activate').addEventListener('click', () => activerTitre(ep));
     document.getElementById('btn-next').addEventListener('click', () => {
       playedTracks.add(trackIdx);
       trackIdx = Math.min(trackIdx+1, ep.tracks.length-1);
       updateCurrentItem(ep); activerTitre(ep);
     });
+    buildRightPanel(ep);
     return;
   }
 
   if(ep.type === 'reconnaissance') {
     renderRecoPanel(ep);
+    buildRightPanel(ep);
     return;
   }
 
@@ -895,10 +930,16 @@ function listenFB() {
     if(zone) zone.classList.add('lit');
   });
 
+  onValue(ref(db,'game/ep_scores'), snap => {
+    const d = snap.val() || {};
+    ['G1','G2','G3'].forEach(t => { epScores[t] = d[t] || 0; });
+    buildScores();
+    buildEpScoresDisplay();
+  });
+
   onValue(ref(db,'game/scores'), snap => {
     const d = snap.val() || {};
     ['G1','G2','G3'].forEach(t => { scores[t] = d[t]?.lettres || []; });
-    buildScores();
   });
 
   onValue(ref(db,'game/gagnant'), snap => {
@@ -907,35 +948,63 @@ function listenFB() {
   });
 }
 
-// ── SCORES ──
+// ── COLONNE DROITE — scores + buzz + attribuer ──
+function buildRightPanel(ep) {
+  const wrap = document.getElementById('scores-wrap');
+  // Scores cumulatifs + pts épreuve + buzz + attribuer
+  buildScores();
+  // Ajouter zone buzz + attribuer sous les scores
+  const buzzDiv = document.createElement('div');
+  buzzDiv.id = 'right-buzz-zone';
+  buzzDiv.innerHTML = `
+    <div style="margin-top:.8rem;border-top:1px solid var(--vert);padding-top:.8rem;">
+      <div style="font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gris);margin-bottom:.5rem;">Buzz entrant</div>
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
+        <div class="buzz-badge" id="buzz-badge">—</div>
+        <div class="buzz-team" id="buzz-team" style="font-size:.78rem;color:var(--blanc);">En attente…</div>
+      </div>
+      <div class="buzz-rep" id="buzz-rep" style="font-size:.7rem;color:var(--gris);margin-bottom:.5rem;">—</div>
+      <div style="display:flex;gap:.3rem;margin-bottom:.4rem;">
+        <button class="btn-sm" onclick="forceTeam(1)">G1</button>
+        <button class="btn-sm" onclick="forceTeam(2)">G2</button>
+        <button class="btn-sm" onclick="forceTeam(3)">G3</button>
+      </div>
+      <div class="verdict-row" id="verdict-row" style="display:none;flex-direction:column;gap:.3rem;">
+        <button class="btn-verdict ok" id="btn-ok">✓ Correct — +1pt</button>
+        <button class="btn-verdict ko" id="btn-ko">✗ Incorrect</button>
+      </div>
+      <div style="margin-top:.6rem;">
+        <div style="font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gris);margin-bottom:.4rem;">Points cumulatifs</div>
+        <div id="ep-scores-display"></div>
+      </div>
+      <button class="btn-main stop" id="btn-attribuer" style="margin-top:.5rem;font-size:.72rem;padding:.5rem;">
+        🏆 Attribuer la lettre
+      </button>
+    </div>`;
+  wrap.appendChild(buzzDiv);
+  attachBuzzHandlers();
+  buildEpScoresDisplay();
+}
+
+// ── SCORES — colonne droite, sans lettres ──
 function buildScores() {
   const wrap = document.getElementById('scores-wrap');
+  // Garder la zone buzz si elle existe
+  const buzzZone = document.getElementById('right-buzz-zone');
   wrap.innerHTML = '';
-  const max = Math.max(...['G1','G2','G3'].map(t => (scores[t]||[]).length));
+  const max = Math.max(0, ...['G1','G2','G3'].map(t => epScores[t]||0));
   ['G1','G2','G3'].forEach(team => {
-    const earned = scores[team] || [];
+    const pts = epScores[team] || 0;
     const d = document.createElement('div');
-    d.className = 'score-card' + (earned.length > 0 && earned.length === max ? ' leader' : '');
-    const chips = MOT.map((l,i) => `<div class="sc-chip${earned.includes(i)?' lit':''}">${earned.includes(i)?l:'·'}</div>`).join('');
-    const attribs = MOT.map((l,i) => `<button class="btn-attrib" data-team="${team}" data-idx="${i}">${l}</button>`).join('');
+    d.className = 'score-card' + (pts > 0 && pts === max ? ' leader' : '');
     d.innerHTML = `
-      <div class="sc-top"><span class="sc-name">${team}</span><span class="sc-count">${earned.length}/${MOT.length}</span></div>
-      <div class="sc-chips">${chips}</div>
-      <div class="attrib-row">${attribs}</div>`;
-    d.querySelectorAll('.btn-attrib').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const t = btn.dataset.team;
-        const i = parseInt(btn.dataset.idx);
-        const cur = scores[t] || [];
-        if(cur.includes(i)) return;
-        const upd = [...cur, i];
-        set(ref(db,'game/scores/'+t+'/lettres'), upd);
-        scores[t] = upd; buildScores();
-        toast('Lettre '+MOT[i]+' → '+t);
-      });
-    });
+      <div class="sc-top">
+        <span class="sc-name">${team}</span>
+        <span class="sc-count" style="font-size:1.1rem;color:var(--mint);font-family:'DM Mono',monospace;">${pts} pts</span>
+      </div>`;
     wrap.appendChild(d);
   });
+  if(buzzZone) wrap.appendChild(buzzZone);
 }
 
 function attributeAll(idx) {
@@ -954,6 +1023,8 @@ function attributeAll(idx) {
 document.getElementById('btn-timer-start').addEventListener('click', () => {
   if(timerOn) return;
   timerOn = true;
+  const startTs = Date.now();
+  set(ref(db,'game/timer'), { running:true, start:startTs, duration:600 });
   timerInt = setInterval(() => {
     timerSec++;
     const m = Math.floor(timerSec/60), s = timerSec%60;
@@ -963,23 +1034,13 @@ document.getElementById('btn-timer-start').addEventListener('click', () => {
 document.getElementById('btn-timer-stop').addEventListener('click', () => {
   clearInterval(timerInt); timerOn = false; timerSec = 0;
   document.getElementById('timer').textContent = '00:00';
+  set(ref(db,'game/timer'), { running:false });
 });
 
 // ── PAUSE ──
 document.getElementById('btn-pause').addEventListener('click', () => {
   setAttente('Pause — prochaine épreuve dans un instant');
   toast('Mise en pause');
-});
-
-// ── QR ──
-document.getElementById('btn-qr').addEventListener('click', () => {
-  const w = window.open('', '_blank', 'width=320,height=360');
-  w.document.write(`<html><body style="background:#031D1E;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;">
-    <div id="qr"></div>
-    <p style="color:#5A7070;font-size:11px;margin-top:12px;word-break:break-all;text-align:center;padding:0 1rem;">${PARTICIPANT_URL}</p>
-  </body></html>`);
-  w.document.close();
-  setTimeout(() => { new w.QRCode(w.document.getElementById('qr'), { text:PARTICIPANT_URL, width:200, height:200, colorDark:'#031D1E', colorLight:'#3FE498' }); }, 200);
 });
 
 // ── RESET ──
