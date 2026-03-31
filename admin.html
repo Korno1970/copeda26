@@ -625,7 +625,7 @@ function attachBuzzHandlers() {
   if(ok) ok.addEventListener('click', () => verdictOk());
   if(ko) ko.addEventListener('click', () => verdictKo());
   if(att) att.addEventListener('click', () => attribuerLettreEpreuve());
-  buildEpScoresDisplay();
+
 }
 
 // ── ÉMINÉO ──
@@ -722,16 +722,16 @@ function renderRecoPanel(ep) {
         <div class="ci-sub" id="ci-sub">Attendu : ${t.artiste}</div>
       </div>
     </div>
-    <div class="reco-preview" id="reco-preview">
-      <img src="${IMAGES_URL}${t.fichier}" alt="${t.titre}" onerror="this.parentElement.innerHTML='<span style=color:var(--gris);font-size:.8rem;padding:1rem>Image non trouvée</span>'">
+    <div class="reco-preview" id="reco-preview" style="height:280px;margin:.6rem 0;">
+      <img src="${IMAGES_URL}${t.fichier}" alt="${t.titre}"
+        style="width:100%;height:100%;object-fit:contain;border-radius:8px;"
+        onerror="this.parentElement.innerHTML='<span style=color:var(--gris);font-size:.8rem;padding:1rem>Image non trouvée</span>'">
     </div>
     <button class="btn-main go" id="btn-activate">▶ Projeter cette image</button>
     <button class="btn-main next" id="btn-next">Image suivante ⏭</button>
-    ${buzzZoneHTML()}
-    <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gris);">Liste des 15 images</div>
+    <div style="font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gris);margin-top:.4rem;">Liste des images</div>
     <div class="track-list" id="track-list">${buildTrackListHTML(ep)}</div>`;
 
-  attachBuzzHandlers();
   attachTrackHandlers(ep);
 
   document.getElementById('btn-activate').addEventListener('click', () => {
@@ -746,7 +746,6 @@ function renderRecoPanel(ep) {
     });
     set(ref(db,'game/buzz'), { team:null, ts:null });
     set(ref(db,'game/resultat'), null);
-    document.getElementById('ci-status') && (document.getElementById('ci-status').textContent = '✓');
     toast('🖼 ' + t.titre);
   });
 
@@ -821,7 +820,7 @@ function verdictOk() {
   if(vrow) vrow.style.display = 'none';
   toast('✓ +1pt → G' + team + ' (' + epScores[teamKey] + ' pts)');
   buzzTeam = null; lastRecoTeam = null;
-  buildEpScoresDisplay();
+
 
   // Passage automatique au titre/image suivant après bonne réponse
   const ep2 = EPREUVES[epIdx];
@@ -855,18 +854,6 @@ function attribuerLettreEpreuve() {
   }
   toast('🏆 Lettre ' + MOT[lettre_idx] + ' → ' + best);
   // Les points NE se remettent PAS à zéro — ils sont cumulatifs
-}
-
-function buildEpScoresDisplay() {
-  // Met à jour l'affichage des scores épreuve dans l'admin
-  const el = document.getElementById('ep-scores-display');
-  if(!el) return;
-  el.innerHTML = ['G1','G2','G3'].map(t =>
-    `<div style="display:flex;align-items:center;justify-content:space-between;padding:.3rem .5rem;border-radius:6px;background:${(epScores[t]||0)>0?'rgba(63,228,152,.1)':'rgba(255,255,255,.03)'};">
-      <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;">${t}</span>
-      <span style="font-family:'DM Mono',monospace;font-size:1.1rem;color:var(--mint);font-weight:500;">${epScores[t]||0} pt${(epScores[t]||1)>1?'s':''}</span>
-    </div>`
-  ).join('');
 }
 
 function verdictKo() {
@@ -934,7 +921,7 @@ function listenFB() {
     const d = snap.val() || {};
     ['G1','G2','G3'].forEach(t => { epScores[t] = d[t] || 0; });
     buildScores();
-    buildEpScoresDisplay();
+  
   });
 
   onValue(ref(db,'game/scores'), snap => {
@@ -950,21 +937,21 @@ function listenFB() {
 
 // ── COLONNE DROITE — scores + buzz + attribuer ──
 function buildRightPanel(ep) {
-  const wrap = document.getElementById('scores-wrap');
-  // Scores cumulatifs + pts épreuve + buzz + attribuer
+  const old = document.getElementById('right-buzz-zone');
+  if(old) old.remove();
   buildScores();
-  // Ajouter zone buzz + attribuer sous les scores
+  const wrap = document.getElementById('scores-wrap');
   const buzzDiv = document.createElement('div');
   buzzDiv.id = 'right-buzz-zone';
   buzzDiv.innerHTML = `
-    <div style="margin-top:.8rem;border-top:1px solid var(--vert);padding-top:.8rem;">
-      <div style="font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gris);margin-bottom:.5rem;">Buzz entrant</div>
-      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;">
+    <div style="margin-top:.8rem;border-top:1px solid var(--vert);padding-top:.8rem;display:flex;flex-direction:column;gap:.4rem;">
+      <div style="font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gris);">Buzz</div>
+      <div style="display:flex;align-items:center;gap:.4rem;">
         <div class="buzz-badge" id="buzz-badge">—</div>
-        <div class="buzz-team" id="buzz-team" style="font-size:.78rem;color:var(--blanc);">En attente…</div>
+        <div id="buzz-team" style="font-size:.78rem;color:var(--blanc);">En attente…</div>
       </div>
-      <div class="buzz-rep" id="buzz-rep" style="font-size:.7rem;color:var(--gris);margin-bottom:.5rem;">—</div>
-      <div style="display:flex;gap:.3rem;margin-bottom:.4rem;">
+      <div id="buzz-rep" style="font-size:.7rem;color:var(--gris);min-height:1rem;">—</div>
+      <div style="display:flex;gap:.3rem;">
         <button class="btn-sm" onclick="forceTeam(1)">G1</button>
         <button class="btn-sm" onclick="forceTeam(2)">G2</button>
         <button class="btn-sm" onclick="forceTeam(3)">G3</button>
@@ -973,23 +960,17 @@ function buildRightPanel(ep) {
         <button class="btn-verdict ok" id="btn-ok">✓ Correct — +1pt</button>
         <button class="btn-verdict ko" id="btn-ko">✗ Incorrect</button>
       </div>
-      <div style="margin-top:.6rem;">
-        <div style="font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gris);margin-bottom:.4rem;">Points cumulatifs</div>
-        <div id="ep-scores-display"></div>
-      </div>
-      <button class="btn-main stop" id="btn-attribuer" style="margin-top:.5rem;font-size:.72rem;padding:.5rem;">
+      <button class="btn-main stop" id="btn-attribuer" style="margin-top:.3rem;font-size:.72rem;padding:.5rem;">
         🏆 Attribuer la lettre
       </button>
     </div>`;
   wrap.appendChild(buzzDiv);
   attachBuzzHandlers();
-  buildEpScoresDisplay();
 }
 
-// ── SCORES — colonne droite, sans lettres ──
+// ── SCORES — colonne droite, points cumulatifs uniquement ──
 function buildScores() {
   const wrap = document.getElementById('scores-wrap');
-  // Garder la zone buzz si elle existe
   const buzzZone = document.getElementById('right-buzz-zone');
   wrap.innerHTML = '';
   const max = Math.max(0, ...['G1','G2','G3'].map(t => epScores[t]||0));
@@ -1000,7 +981,7 @@ function buildScores() {
     d.innerHTML = `
       <div class="sc-top">
         <span class="sc-name">${team}</span>
-        <span class="sc-count" style="font-size:1.1rem;color:var(--mint);font-family:'DM Mono',monospace;">${pts} pts</span>
+        <span class="sc-count" style="font-size:1.3rem;color:var(--mint);font-family:'DM Mono',monospace;font-weight:700;">${pts}</span>
       </div>`;
     wrap.appendChild(d);
   });
