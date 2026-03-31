@@ -1042,9 +1042,11 @@ document.getElementById('btn-pause').addEventListener('click', () => {
 document.getElementById('btn-reset').addEventListener('click', () => {
   if(!confirm('Réinitialiser toute la partie ?')) return;
   set(ref(db,'game'), null);
-  scores = { G1:[], G2:[], G3:[], G4:[], G5:[] };
+  set(ref(db,'emineo'), null);
+  scores = { G1:[], G2:[], G3:[] };
+  epScores = { G1:0, G2:0, G3:0 };
   buildScores();
-  setAttente('Partie réinitialisée');
+  setAttente('Le jeu commence bientôt !');
   toast('Reset effectué');
 });
 
