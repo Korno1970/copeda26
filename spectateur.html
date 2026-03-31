@@ -220,7 +220,7 @@ html, body {
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, onValue, get } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const IMAGES_URL = 'https://korno1970.github.io/copeda26/';
 
@@ -395,10 +395,10 @@ function showImage(data) {
 }
 
 // ── EMINEO — photos uploadées en temps réel ──
-onValue(ref(db,'game/emineo_photos'), snap => {
+onValue(ref(db,'emineo/photos'), snap => {
   const d = snap.val();
-  if(!d || currentEpreuve?.statut !== 'emineo') return;
-  renderEmineoPhotos(d);
+  if(!d) return;
+  if(currentEpreuve?.statut === 'emineo') renderEmineoPhotos(d);
 });
 
 function showEmineo() {
@@ -418,11 +418,10 @@ function showEmineo() {
         <div class="emineo-photos" id="emineo-G3"></div>
       </div>
     </div>`;
-  // Charger les photos existantes
-  import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js').then(({ get, ref: fbRef }) => {
-    get(fbRef(db,'game/emineo_photos')).then(snap => {
-      if(snap.exists()) renderEmineoPhotos(snap.val());
-    });
+  renderPts();
+  // Charger les photos déjà présentes
+  get(ref(db,'emineo/photos')).then(snap => {
+    if(snap.exists()) renderEmineoPhotos(snap.val());
   });
 }
 
