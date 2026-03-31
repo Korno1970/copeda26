@@ -1185,21 +1185,16 @@ const RECO_CONFIG = {
 function afficherImageReco(data) {
   const fichier = data.fichier || '';
   const num = data.image_num || '—';
-  const total = data.image_total || 15;
+  const total = data.image_total || '—';
   const config = RECO_CONFIG[fichier] || { labels: ['Réponse 1', 'Réponse 2'], champs: 2 };
 
   // Numérotation
-  document.getElementById('reco-num').textContent = `ÉPREUVE 4 · IMAGE ${num}/${total}`;
-
-  // Image
-  const img = document.getElementById('reco-img');
-  img.src = IMAGES_BASE_URL + fichier;
-  img.alt = data.sujet || 'Image à identifier';
+  const numEl = document.getElementById('reco-num');
+  if(numEl) numEl.textContent = `IMAGE ${num}/${total}`;
 
   // Champs
   document.getElementById('reco-label1').textContent = config.labels[0] || 'Réponse';
   document.getElementById('reco-champ1').value = '';
-  document.getElementById('reco-champ1').placeholder = 'Votre réponse…';
 
   const champ2Wrap = document.getElementById('reco-champ2-wrap');
   if (config.champs === 2) {
