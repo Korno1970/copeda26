@@ -430,10 +430,11 @@ function renderEmineoPhotos(data) {
   ['G1','G2','G3'].forEach(g => {
     const col = document.getElementById('emineo-' + g);
     if(!col) return;
-    const photos = data[g] ? Object.values(data[g]) : [];
-    col.innerHTML = photos.map(p => `
-      <img class="emineo-photo" src="${p.url}" alt="${p.lettre||''}">
-      <div class="emineo-photo-label">${p.lettre||''}</div>
+    const gData = data[g] || {};
+    // Structure : { E: base64, M: base64, ... }
+    col.innerHTML = Object.entries(gData).map(([lettre, base64]) => `
+      <img class="emineo-photo" src="${base64}" alt="${lettre}">
+      <div class="emineo-photo-label">${lettre}</div>
     `).join('');
   });
 }

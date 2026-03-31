@@ -851,7 +851,6 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, set, push, get } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDUxgdh0Q3kAKkOr9Pqxdlpg56mkNwE4lo",
@@ -865,7 +864,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const storage = getStorage(app);
 
 // ── PROXY CLAUDE ──
 const CLAUDE_PROXY_URL = 'https://cesacom-edu.net/proxy.php';
@@ -1101,16 +1099,16 @@ document.getElementById('em-send-btn').addEventListener('click', async () => {
   if(!emineoFichierEnAttente || !emineoLettreSelectionnee) return;
   const btn = document.getElementById('em-send-btn');
   btn.disabled = true;
-  document.getElementById('em-feedback').textContent = 'Envoi en cours…';
+  document.getElementById('em-feedback').textContent = 'Compression en cours…';
 
   try {
-    const path = `emineo/G${myTeam}/${emineoLettreSelectionnee}_${Date.now()}.jpg`;
-    const storageRef = sRef(storage, path);
-    await uploadBytes(storageRef, emineoFichierEnAttente);
-    const downloadUrl = await getDownloadURL(storageRef);
+    // Compression via canvas — max 400px, qualité 60%
+    const base64 = await compresserImage(emineoFichierEnAttente, 400, 0.6);
 
-    // Écrire l'URL dans Realtime DB
-    await set(ref(db,`emineo/photos/G${myTeam}/${emineoLettreSelectionnee}`), downloadUrl);
+    document.getElementById('em-feedback').textContent = 'Envoi en cours…';
+
+    // Écrire directement en base64 dans Realtime DB
+    await set(ref(db, `emineo/photos/G${myTeam}/${emineoLettreSelectionnee}`), base64);
 
     emineoUploaded[emineoLettreSelectionnee] = true;
     document.getElementById('em-feedback').textContent = `✓ Lettre ${emineoLettreSelectionnee} envoyée !`;
@@ -1125,6 +1123,28 @@ document.getElementById('em-send-btn').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+function compresserImage(file, maxPx, qualite) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        const w = Math.round(img.width * ratio);
+        const h = Math.round(img.height * ratio);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', qualite));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ── RECONNAISSANCE ──
 const IMAGES_BASE_URL = 'https://korno1970.github.io/copeda26/';
